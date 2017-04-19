@@ -570,6 +570,32 @@
           return (name.charAt(0).toUpperCase() + name.slice(1)).replace(/_/g, ' ');
         }
 
+        function expandExamples(methodInfo, types) {
+          if (!methodInfo.body) { return methodInfo; }
+
+          var findExamplesForType = function (type) {
+            if (!type) { return; }
+
+            var dataType = RAML.Inspector.Types.findType(type, types);
+
+            if (!dataType) { return; }
+            else if (dataType.example) { return dataType.example; }
+
+            return findExamplesForType(dataType.type[0]);
+          };
+
+          Object.keys(methodInfo.body).map(function (key) {
+            var body = methodInfo.body[key];
+            if (!body.hasOwnProperty('example')) {
+              var examples = findExamplesForType(body.type[0]);
+              if (examples) { body.example = examples; }
+            }
+            return body;
+          });
+
+          return methodInfo;
+        }
+
         $scope.readTraits = function (traits) {
           var list = [];
           var traitList = traits || [];
@@ -614,7 +640,7 @@
                                                              .add('li')
                                                              .add('.raml-console-tab');
 
-          $scope.methodInfo               = methodInfo;
+          $scope.methodInfo               = expandExamples(methodInfo, $scope.types);
           $scope.responseInfo             = getResponseInfo();
           $scope.context                  = new RAML.Services.TryIt.Context($scope.raml.baseUriParameters, $scope.resource, $scope.methodInfo);
           $scope.requestUrl               = '';
